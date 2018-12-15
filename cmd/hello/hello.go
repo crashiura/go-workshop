@@ -6,8 +6,9 @@ import (
 	"os"
 )
 
-var greeterType = flag.String("greeter", "suffix", "type of greeter")
+var greeterType = flag.String("greeter", "suffix", "type of the greeter")
 
+// Greeter greets someone by name.
 type Greeter interface {
 	Greet(name string)
 }
@@ -27,11 +28,6 @@ func (s SuffixGreeter) Greet(name string) {
 }
 
 func main() {
-	//
-	//if len(os.Args) < 2 {
-	//	fmt.Println("Usage: %s <type-of-greeter> \n", os.Args[0])
-	//	os.Exit(1)
-	//}
 	flag.Parse()
 
 	var g Greeter
@@ -41,8 +37,9 @@ func main() {
 	case "suffix":
 		g = SuffixGreeter{}
 	default:
-		fmt.Println("exit")
+		fmt.Println("unexpected greeter:", os.Args[1])
 		os.Exit(1)
 	}
+
 	g.Greet("world")
 }
