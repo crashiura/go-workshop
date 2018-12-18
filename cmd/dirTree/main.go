@@ -6,8 +6,18 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strings"
+	"path/filepath"
+	"sort"
 )
+
+const LastElement = "└───"
+const DefaultElemtnt = "├───"
+
+type ByName []os.FileInfo
+
+func (a ByName) Len() int           { return len(a) }
+func (a ByName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByName) Less(i, j int) bool { return a[i].Name() < a[j].Name() }
 
 func main() {
 	out := os.Stdout
@@ -24,53 +34,63 @@ func main() {
 }
 
 func dirTree(out io.Writer, path string, printFiles bool) error {
-	path = "./testdata"
-	printDir(path)
-	//files, err := ioutil.ReadDir(path)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
-	//for _, f := range files {
-	//
-	//	if f.IsDir() {
-	//		filesInDir, err := ioutil.ReadDir(path + "/" +f.Name())
-	//
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-	//
-	//		for _, ff := range filesInDir {
-	//			fmt.Printf("├───%s\n" ,ff.Name())
-	//		}
-	//
-	//		fmt.Printf("├───%s\n" ,f.Name())
-	//	}
-	//}
+	var ident, result string
+	result = printDir(path, result, ident, printFiles)
+	fmt.Fprintln(out, result)
 
 	return nil
 }
+func getTab(index, lastIndex int) string {
+	if index == lastIndex {
+		return "\t"
+	}
 
-func printDir(path string) {
+	return "│\t"
+}
+func fileSize(file os.FileInfo) string {
+	if file.IsDir() {
+		return ""
+	} else if file.Size() <= 0 {
+		return " (empty)"
+	} else {
+		return " (" + fmt.Sprint(file.Size()) + "b)"
+	}
+}
 
+func getSortFiles(path string) []os.FileInfo {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	count := strings.Count(path, "/")
+	sort.Sort(ByName(files))
 
-	for _, f := range files {
-		if f.IsDir() {
-			twoPath := path + "/" + f.Name()
-			printDir(twoPath)
+	return files
+}
+
+func printDir(path string, result string, ident string, printFiles bool) string {
+	sortFiles := getSortFiles(path)
+
+	for index, f := range sortFiles {
+		var line string
+		if !printFiles && !f.IsDir() {
+			continue
 		}
-		if 0 < count {
-			//tab := strings.Repeat("\n", count)
 
-			fmt.Printf("\t├───%s\n", f.Name())
+		if index == len(sortFiles)-1 {
+			line += ident + LastElement
 		} else {
-			fmt.Printf("├───%s\n", f.Name())
+			line += ident + DefaultElemtnt
+		}
+
+		//fmt.Printf(line + f.Name() + fileSize(f) + "\n")
+		result += line + f.Name() + fileSize(f) + "\n"
+
+		if f.IsDir() {
+			newPath := filepath.Join(path, f.Name())
+			printDir(newPath, result, ident+getTab(index, len(sortFiles)-1), printFiles)
 		}
 	}
+
+	return result
 }
